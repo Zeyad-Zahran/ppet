@@ -119,7 +119,7 @@
 <body>
   <div class="container">
     <h1>لوحة الإرسال الاحتياطي لبيانات الطوق</h1>
-    <div class="sub">إرسال يدوي للبيانات إلى Endpoints السيرفر في حال توقف الحساسات أو الهاردوير</div>
+    <div class="sub">إرسال يدوي للبيانات إلى Endpoints السيرفر عبر GitHub Pages</div>
 
     <!-- إعدادات الاتصال -->
     <div class="card">
@@ -214,13 +214,19 @@
       <div id="stAccel" class="status"></div>
     </div>
 
-    <!-- الصوت -->
+    <!-- الصوت (5 اختيارات ثابتة) -->
     <div class="card">
       <h2>5. اختيار وإرسال مقطع صوتي من نفس المسار (/api/v1/sound)</h2>
       <div class="grid">
         <div>
-          <label for="audioSelect">اختر ملف صوتي من نفس مجلد index.html</label>
-          <select id="audioSelect"></select>
+          <label for="audioSelect">اختر ملف صوتي (5 خيارات ثابتة)</label>
+          <select id="audioSelect">
+            <option value="audio_1.wav" selected>audio_1.wav</option>
+            <option value="audio_2.wav">audio_2.wav</option>
+            <option value="audio_3.wav">audio_3.wav</option>
+            <option value="audio_4.wav">audio_4.wav</option>
+            <option value="audio_5.wav">audio_5.wav</option>
+          </select>
         </div>
         <div>
           <label for="peakDb">Peak dB (اختياري)</label>
@@ -232,7 +238,7 @@
         </div>
       </div>
       <div class="hint">
-        عدّل مصفوفة <code>LOCAL_AUDIO_FILES</code> في الكود بأسماء الملفات الموجودة في نفس مسار <code>index.html</code>، وشغّل الصفحة عبر خادم محلي (مثل Live Server أو <code>python -m http.server</code>).
+        عدّل قيم <code>value</code> والنص داخل الـ <code>&lt;option&gt;</code> لتطابق أسماء الملفات المرفوعة في نفس مستوى <code>index.html</code> على GitHub Pages.
       </div>
       <button onclick="sendSound()">إرسال وتحليل الصوت المحدد</button>
       <div id="stSound" class="status"></div>
@@ -249,33 +255,6 @@
   </div>
 
   <script>
-    // ضع هنا أسماء الملفات الصوتية الموجودة في نفس المستوى/المجلد الخاص بـ index.html
-    const LOCAL_AUDIO_FILES = [
-      "bark_1.wav",
-      "whine_1.wav",
-      "growl_1.wav"
-    ];
-
-    function populateAudioSelect() {
-      const select = document.getElementById("audioSelect");
-      select.innerHTML = "";
-      if (!LOCAL_AUDIO_FILES.length) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "لا توجد ملفات مضافة في LOCAL_AUDIO_FILES";
-        select.appendChild(opt);
-        return;
-      }
-      LOCAL_AUDIO_FILES.forEach((filename) => {
-        const cleanName = String(filename).trim();
-        if (!cleanName) return;
-        const opt = document.createElement("option");
-        opt.value = cleanName;
-        opt.textContent = cleanName;
-        select.appendChild(opt);
-      });
-    }
-
     function guessMimeType(filename) {
       const lower = filename.toLowerCase();
       if (lower.endsWith(".mp3")) return "audio/mpeg";
@@ -359,21 +338,19 @@
     }
 
     async function sendSound() {
-      const select = document.getElementById("audioSelect");
-      const filename = select.value;
+      const filename = document.getElementById("audioSelect").value.trim();
       if (!filename) {
         setStatus("stSound", "اختر ملفاً صوتياً من القائمة أولاً.", false);
         return;
       }
 
-      setStatus("stSound", `جاري قراءة الملف (${filename}) ورفعه...`, true);
+      setStatus("stSound", `جاري تحميل (${filename}) ورفعه للسيرفر...`, true);
       try {
-        // جلب الملف من نفس مستوى مسار index.html
         const localFileRes = await fetch("./" + encodeURIComponent(filename));
         if (!localFileRes.ok) {
           setStatus(
             "stSound",
-            `تعذر قراءة الملف ./${filename} (${localFileRes.status}). تأكد من وجوده بنفس مسار index.html وتشغيل الصفحة عبر خادم محلي.`,
+            `تعذر تحميل الملف ./${filename} (${localFileRes.status}). تأكد من رفعه بنفس مستوى index.html في المستودع.`,
             false
           );
           return;
@@ -411,7 +388,7 @@
           document.getElementById("latestOutput").textContent = text;
         }
       } catch (err) {
-        setStatus("stSound", `خطأ أثناء قراءة أو رفع الصوت: ${err.message}`, false);
+        setStatus("stSound", `خطأ أثناء تحميل أو رفع الصوت: ${err.message}`, false);
       }
     }
 
@@ -443,8 +420,6 @@
       await sendAccel();
       await fetchLatest();
     }
-
-    populateAudioSelect();
   </script>
 </body>
 </html>
