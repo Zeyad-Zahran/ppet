@@ -119,7 +119,7 @@
 <body>
   <div class="container">
     <h1>لوحة الإرسال الاحتياطي لبيانات الطوق</h1>
-    <div class="sub">إرسال يدوي للبيانات إلى Endpoints السيرفر عبر GitHub Pages</div>
+    <div class="sub">اختاري نوع الحيوان والحركة لتعبئة قراءات الديمو. تقدري تعدّلي الأرقام قبل الإرسال.</div>
 
     <!-- إعدادات الاتصال -->
     <div class="card">
@@ -170,7 +170,7 @@
       <div class="grid">
         <div>
           <label for="tempC">Temperature (°C)</label>
-          <input id="tempC" type="number" step="0.1" value="38.4" />
+          <input id="tempC" type="number" step="0.1" value="34.1" />
         </div>
         <div>
           <label for="sensorName">Sensor</label>
@@ -187,29 +187,26 @@
       <div class="grid">
         <div>
           <label for="activity">Activity</label>
-          <select id="activity">
-            <option value="rest" selected>rest</option>
-            <option value="walk">walk</option>
-            <option value="run">run</option>
-          </select>
+          <select id="activity"></select>
         </div>
         <div>
           <label for="motionG">Motion (g)</label>
-          <input id="motionG" type="number" step="0.01" value="0.05" />
+          <input id="motionG" type="number" step="0.01" value="0.03" />
         </div>
         <div>
           <label for="motionMaxG">Motion Max (g)</label>
-          <input id="motionMaxG" type="number" step="0.01" value="0.12" />
+          <input id="motionMaxG" type="number" step="0.01" value="0.10" />
         </div>
         <div>
           <label for="steps">Steps</label>
-          <input id="steps" type="number" value="10" />
+          <input id="steps" type="number" min="0" value="0" />
         </div>
         <div>
           <label for="stepsTotal">Steps Total</label>
           <input id="stepsTotal" type="number" value="250" />
         </div>
       </div>
+      <div class="hint">قراءات افتراضية للديمو. الخطوات هنا من نافذة افتراضية مدتها ٥ ثواني.</div>
       <button onclick="sendAccel()">إرسال بيانات الحركة</button>
       <div id="stAccel" class="status"></div>
     </div>
@@ -219,14 +216,14 @@
       <h2>5. اختيار وإرسال مقطع صوتي من نفس المسار (/api/v1/sound)</h2>
       <div class="grid">
         <div>
-          <label for="audioSelect">اختر ملف صوتي (5 خيارات ثابتة)</label>
+          <label for="audioSelect">اختاري تسجيل من أصوات نفس الحيوان</label>
           <select id="audioSelect">
-            <option value="Kittenfeedthestraycats.mp3" selected>Kittenfeedthestraycats-kitten-sound-2- 354217</option>
-            <option value="Cat-purr.mp3">Cat-purr(chosic.com).mp3</option>
-            <option value="Meow-cat.mp3">Meow-cat-10(chosic.com).mp3</option>
-            <option value="Old-dog-barking.mp3">Old-dog-barking-1(chosic.com).mp3</option>
-            <option value="dogwoo.mp3">dog_woo_Barking-dog-3(chosic.com).mp3</option>
-            <option value="dogcrying.mp3">dog_crying_scottishperson-sound-effec t-dog-crying-05-367321 copy</option>
+            <option value="Kittenfeedthestraycats.mp3" data-species="cat" selected>Kittenfeedthestraycats-kitten-sound-2- 354217</option>
+            <option value="Cat-purr.mp3" data-species="cat">Cat-purr(chosic.com).mp3</option>
+            <option value="Meow-cat.mp3" data-species="cat">Meow-cat-10(chosic.com).mp3</option>
+            <option value="Old-dog-barking.mp3" data-species="dog">Old-dog-barking-1(chosic.com).mp3</option>
+            <option value="dogwoo.mp3" data-species="dog">dog_woo_Barking-dog-3(chosic.com).mp3</option>
+            <option value="dogcrying.mp3" data-species="dog">dog_crying_scottishperson-sound-effec t-dog-crying-05-367321 copy</option>
 
           </select>
         </div>
@@ -240,7 +237,7 @@
         </div>
       </div>
       <div class="hint">
-        عدّل قيم <code>value</code> والنص داخل الـ <code>&lt;option&gt;</code> لتطابق أسماء الملفات المرفوعة في نفس مستوى <code>index.html</code> على GitHub Pages.
+        قيم الديسيبل اختيارية. غيّريها لو عندك قياسات للتسجيل، أو سيبيها فاضية.
       </div>
       <button onclick="sendSound()">إرسال وتحليل الصوت المحدد</button>
       <div id="stSound" class="status"></div>
@@ -257,6 +254,53 @@
   </div>
 
   <script>
+    const activityPresets = {
+      cat: {
+        rest: { label: "راحة", bpm: 135, motionG: 0.03, motionMaxG: 0.10, steps: 0 },
+        walk: { label: "مشي", bpm: 155, motionG: 0.18, motionMaxG: 0.45, steps: 8 },
+        running: { label: "جري", bpm: 190, motionG: 0.55, motionMaxG: 1.40, steps: 16 }
+      },
+      dog: {
+        lying_on_chest: { label: "استلقاء على الصدر", bpm: 85, motionG: 0.03, motionMaxG: 0.10, steps: 0 },
+        sitting: { label: "جلوس", bpm: 90, motionG: 0.04, motionMaxG: 0.12, steps: 0 },
+        sniffing: { label: "شمّ", bpm: 100, motionG: 0.12, motionMaxG: 0.35, steps: 2 },
+        standing: { label: "وقوف", bpm: 95, motionG: 0.05, motionMaxG: 0.15, steps: 0 },
+        trotting: { label: "هرولة", bpm: 140, motionG: 0.35, motionMaxG: 0.90, steps: 13 },
+        walking: { label: "مشي", bpm: 115, motionG: 0.20, motionMaxG: 0.55, steps: 8 },
+        running: { label: "جري", bpm: 170, motionG: 0.60, motionMaxG: 1.60, steps: 19 }
+      }
+    };
+
+    const speciesSelect = document.getElementById("species");
+    const activitySelect = document.getElementById("activity");
+    const audioSelect = document.getElementById("audioSelect");
+    const audioOptions = Array.from(audioSelect.options);
+
+    function applyActivityPreset() {
+      const { bpm, motionG, motionMaxG, steps } = activityPresets[speciesSelect.value][activitySelect.value];
+      document.getElementById("bpm").value = bpm;
+      document.getElementById("motionG").value = motionG.toFixed(2);
+      document.getElementById("motionMaxG").value = motionMaxG.toFixed(2);
+      document.getElementById("steps").value = steps;
+      // Each preset starts from the same demo counter for easy comparisons.
+      document.getElementById("stepsTotal").value = 250 + steps;
+    }
+
+    function updateSpecies() {
+      const species = speciesSelect.value;
+      activitySelect.replaceChildren(...Object.entries(activityPresets[species]).map(
+        ([value, preset]) => new Option(preset.label + " (" + value + ")", value)
+      ));
+      activitySelect.selectedIndex = 0;
+      audioSelect.replaceChildren(...audioOptions.filter(option => option.dataset.species === species));
+      audioSelect.selectedIndex = 0;
+      applyActivityPreset();
+    }
+
+    speciesSelect.addEventListener("change", updateSpecies);
+    activitySelect.addEventListener("change", applyActivityPreset);
+    updateSpecies();
+
     function guessMimeType(filename) {
       const lower = filename.toLowerCase();
       if (lower.endsWith(".mp3")) return "audio/mpeg";
@@ -424,4 +468,4 @@
     }
   </script>
 </body>
-</html>
+  </html
