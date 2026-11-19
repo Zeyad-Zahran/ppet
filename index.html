@@ -89,6 +89,11 @@
       margin-right: 8px;
     }
     button:hover { opacity: 0.92; }
+    .hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
     .status {
       margin-top: 10px;
       font-size: 13px;
@@ -211,11 +216,11 @@
 
     <!-- الصوت -->
     <div class="card">
-      <h2>5. رفع مقطع صوتي (/api/v1/sound)</h2>
+      <h2>5. اختيار وإرسال مقطع صوتي من نفس المسار (/api/v1/sound)</h2>
       <div class="grid">
         <div>
-          <label for="audioFile">ملف الصوت (WAV / MP3 / OGG)</label>
-          <input id="audioFile" type="file" accept="audio/*" />
+          <label for="audioSelect">اختر ملف صوتي من نفس مجلد index.html</label>
+          <select id="audioSelect"></select>
         </div>
         <div>
           <label for="peakDb">Peak dB (اختياري)</label>
@@ -226,7 +231,10 @@
           <input id="bgDb" type="number" step="0.1" value="-45.0" />
         </div>
       </div>
-      <button onclick="sendSound()">رفع وتحليل الصوت</button>
+      <div class="hint">
+        عدّل مصفوفة <code>LOCAL_AUDIO_FILES</code> في الكود بأسماء الملفات الموجودة في نفس مسار <code>index.html</code>، وشغّل الصفحة عبر خادم محلي (مثل Live Server أو <code>python -m http.server</code>).
+      </div>
+      <button onclick="sendSound()">إرسال وتحليل الصوت المحدد</button>
       <div id="stSound" class="status"></div>
     </div>
 
@@ -241,6 +249,41 @@
   </div>
 
   <script>
+    // ضع هنا أسماء الملفات الصوتية الموجودة في نفس المستوى/المجلد الخاص بـ index.html
+    const LOCAL_AUDIO_FILES = [
+      "bark_1.wav",
+      "whine_1.wav",
+      "growl_1.wav"
+    ];
+
+    function populateAudioSelect() {
+      const select = document.getElementById("audioSelect");
+      select.innerHTML = "";
+      if (!LOCAL_AUDIO_FILES.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "لا توجد ملفات مضافة في LOCAL_AUDIO_FILES";
+        select.appendChild(opt);
+        return;
+      }
+      LOCAL_AUDIO_FILES.forEach((filename) => {
+        const cleanName = String(filename).trim();
+        if (!cleanName) return;
+        const opt = document.createElement("option");
+        opt.value = cleanName;
+        opt.textContent = cleanName;
+        select.appendChild(opt);
+      });
+    }
+
+    function guessMimeType(filename) {
+      const lower = filename.toLowerCase();
+      if (lower.endsWith(".mp3")) return "audio/mpeg";
+      if (lower.endsWith(".ogg")) return "audio/ogg";
+      if (lower.endsWith(".m4a")) return "audio/mp4";
+      return "audio/wav";
+    }
+
     function getBase() {
       return document.getElementById("baseUrl").value.trim().replace(/\/+$/, "");
     }
@@ -316,26 +359,41 @@
     }
 
     async function sendSound() {
-      const fileInput = document.getElementById("audioFile");
-      if (!fileInput.files || !fileInput.files[0]) {
-        setStatus("stSound", "اختر ملف صوتي أولاً.", false);
+      const select = document.getElementById("audioSelect");
+      const filename = select.value;
+      if (!filename) {
+        setStatus("stSound", "اختر ملفاً صوتياً من القائمة أولاً.", false);
         return;
       }
 
-      const fd = new FormData();
-      fd.append("file", fileInput.files[0]);
-      fd.append("device_id", document.getElementById("deviceId").value.trim());
-      fd.append("timestamp", new Date().toISOString());
-      fd.append("uptime_ms", String(Math.round(performance.now())));
-      fd.append("species", document.getElementById("species").value);
-      fd.append("peak_db", document.getElementById("peakDb").value);
-      fd.append("background_db", document.getElementById("bgDb").value);
-      fd.append("temperature_c", document.getElementById("tempC").value);
-      fd.append("bpm", document.getElementById("bpm").value);
-      fd.append("activity_before", document.getElementById("activity").value);
-
-      setStatus("stSound", "جاري الرفع والتحليل...", true);
+      setStatus("stSound", `جاري قراءة الملف (${filename}) ورفعه...`, true);
       try {
+        // جلب الملف من نفس مستوى مسار index.html
+        const localFileRes = await fetch("./" + encodeURIComponent(filename));
+        if (!localFileRes.ok) {
+          setStatus(
+            "stSound",
+            `تعذر قراءة الملف ./${filename} (${localFileRes.status}). تأكد من وجوده بنفس مسار index.html وتشغيل الصفحة عبر خادم محلي.`,
+            false
+          );
+          return;
+        }
+
+        const blob = await localFileRes.blob();
+        const fileObj = new File([blob], filename, { type: blob.type || guessMimeType(filename) });
+
+        const fd = new FormData();
+        fd.append("file", fileObj);
+        fd.append("device_id", document.getElementById("deviceId").value.trim());
+        fd.append("timestamp", new Date().toISOString());
+        fd.append("uptime_ms", String(Math.round(performance.now())));
+        fd.append("species", document.getElementById("species").value);
+        fd.append("peak_db", document.getElementById("peakDb").value);
+        fd.append("background_db", document.getElementById("bgDb").value);
+        fd.append("temperature_c", document.getElementById("tempC").value);
+        fd.append("bpm", document.getElementById("bpm").value);
+        fd.append("activity_before", document.getElementById("activity").value);
+
         const res = await fetch(getBase() + "/api/v1/sound", {
           method: "POST",
           headers: commonHeaders(),
@@ -346,14 +404,14 @@
           setStatus("stSound", `فشل رفع الصوت (${res.status}): ${text}`, false);
           return;
         }
-        setStatus("stSound", `تم التحليل بنجاح (${res.status}).`, true);
+        setStatus("stSound", `تم إرسال وتحليل ${filename} بنجاح (${res.status}).`, true);
         try {
           document.getElementById("latestOutput").textContent = JSON.stringify(JSON.parse(text), null, 2);
         } catch {
           document.getElementById("latestOutput").textContent = text;
         }
       } catch (err) {
-        setStatus("stSound", `خطأ أثناء رفع الصوت: ${err.message}`, false);
+        setStatus("stSound", `خطأ أثناء قراءة أو رفع الصوت: ${err.message}`, false);
       }
     }
 
@@ -385,6 +443,8 @@
       await sendAccel();
       await fetchLatest();
     }
+
+    populateAudioSelect();
   </script>
 </body>
 </html>
