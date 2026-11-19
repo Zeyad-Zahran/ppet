@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إرسال بيانات الطوق الاحتياطي - AstraSI</title>
+  <style>
+    :root {
+      --bg: #0e1116;
+      --card: #161b22;
+      --border: #2b313c;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --ok: #3fb950;
+      --err: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      color: var(--accent);
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input, select {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d1117;
+      color: var(--text);
+      font-size: 14px;
+    }
+    button {
+      margin-top: 12px;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #06101d;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #21262d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      margin-right: 8px;
+    }
+    button:hover { opacity: 0.92; }
+    .status {
+      margin-top: 10px;
+      font-size: 13px;
+      min-height: 20px;
+      word-break: break-word;
+    }
+    .ok { color: var(--ok); }
+    .err { color: var(--err); }
+    pre {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 10px 0 0;
+      max-height: 360px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>لوحة الإرسال الاحتياطي لبيانات الطوق</h1>
+    <div class="sub">إرسال يدوي للبيانات إلى Endpoints السيرفر في حال توقف الحساسات أو الهاردوير</div>
+
+    <!-- إعدادات الاتصال -->
+    <div class="card">
+      <h2>1. إعدادات السيرفر والجهاز</h2>
+      <div class="grid">
+        <div>
+          <label for="baseUrl">Base URL (رابط ngrok)</label>
+          <input id="baseUrl" type="text" value="https://subcancellous-ninfa-crumbier.ngrok-free.dev" />
+        </div>
+        <div>
+          <label for="deviceId">Device ID</label>
+          <input id="deviceId" type="text" value="AS-BACKUP-01" />
+        </div>
+        <div>
+          <label for="species">نوع الحيوان (species)</label>
+          <select id="species">
+            <option value="dog" selected>dog (كلب)</option>
+            <option value="cat">cat (قطة)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- نبض القلب -->
+    <div class="card">
+      <h2>2. نبض القلب (/api/v1/heartreat)</h2>
+      <div class="grid">
+        <div>
+          <label for="bpm">BPM</label>
+          <input id="bpm" type="number" step="0.1" value="85" />
+        </div>
+        <div>
+          <label for="quality">Quality (0.0 - 1.0)</label>
+          <input id="quality" type="number" step="0.01" min="0" max="1" value="0.9" />
+        </div>
+        <div>
+          <label for="measuredSeconds">Measured Seconds</label>
+          <input id="measuredSeconds" type="number" value="20" />
+        </div>
+      </div>
+      <button onclick="sendHeart()">إرسال نبض القلب</button>
+      <div id="stHeart" class="status"></div>
+    </div>
+
+    <!-- درجة الحرارة -->
+    <div class="card">
+      <h2>3. درجة الحرارة (/api/v1/heat)</h2>
+      <div class="grid">
+        <div>
+          <label for="tempC">Temperature (°C)</label>
+          <input id="tempC" type="number" step="0.1" value="38.4" />
+        </div>
+        <div>
+          <label for="sensorName">Sensor</label>
+          <input id="sensorName" type="text" value="manual_backup" />
+        </div>
+      </div>
+      <button onclick="sendHeat()">إرسال درجة الحرارة</button>
+      <div id="stHeat" class="status"></div>
+    </div>
+
+    <!-- الحركة والنشاط -->
+    <div class="card">
+      <h2>4. الحركة والنشاط (/api/v1/accelerator)</h2>
+      <div class="grid">
+        <div>
+          <label for="activity">Activity</label>
+          <select id="activity">
+            <option value="rest" selected>rest</option>
+            <option value="walk">walk</option>
+            <option value="run">run</option>
+          </select>
+        </div>
+        <div>
+          <label for="motionG">Motion (g)</label>
+          <input id="motionG" type="number" step="0.01" value="0.05" />
+        </div>
+        <div>
+          <label for="motionMaxG">Motion Max (g)</label>
+          <input id="motionMaxG" type="number" step="0.01" value="0.12" />
+        </div>
+        <div>
+          <label for="steps">Steps</label>
+          <input id="steps" type="number" value="10" />
+        </div>
+        <div>
+          <label for="stepsTotal">Steps Total</label>
+          <input id="stepsTotal" type="number" value="250" />
+        </div>
+      </div>
+      <button onclick="sendAccel()">إرسال بيانات الحركة</button>
+      <div id="stAccel" class="status"></div>
+    </div>
+
+    <!-- الصوت -->
+    <div class="card">
+      <h2>5. رفع مقطع صوتي (/api/v1/sound)</h2>
+      <div class="grid">
+        <div>
+          <label for="audioFile">ملف الصوت (WAV / MP3 / OGG)</label>
+          <input id="audioFile" type="file" accept="audio/*" />
+        </div>
+        <div>
+          <label for="peakDb">Peak dB (اختياري)</label>
+          <input id="peakDb" type="number" step="0.1" value="-15.0" />
+        </div>
+        <div>
+          <label for="bgDb">Background dB (اختياري)</label>
+          <input id="bgDb" type="number" step="0.1" value="-45.0" />
+        </div>
+      </div>
+      <button onclick="sendSound()">رفع وتحليل الصوت</button>
+      <div id="stSound" class="status"></div>
+    </div>
+
+    <!-- أحدث نتيجة -->
+    <div class="card">
+      <h2>6. أحدث نتيجة من السيرفر (/api/v1/latest-result)</h2>
+      <button onclick="fetchLatest()">جلب أحدث نتيجة</button>
+      <button class="secondary" onclick="sendAllSensors()">إرسال كل الحساسات معاً</button>
+      <div id="stLatest" class="status"></div>
+      <pre id="latestOutput">لم يتم الجلب بعد.</pre>
+    </div>
+  </div>
+
+  <script>
+    function getBase() {
+      return document.getElementById("baseUrl").value.trim().replace(/\/+$/, "");
+    }
+
+    function commonHeaders(extra = {}) {
+      return {
+        "ngrok-skip-browser-warning": "true",
+        ...extra
+      };
+    }
+
+    function setStatus(elId, msg, isOk) {
+      const el = document.getElementById(elId);
+      el.className = "status " + (isOk ? "ok" : "err");
+      el.textContent = msg;
+    }
+
+    async function postJson(path, payload, statusId) {
+      try {
+        const res = await fetch(getBase() + path, {
+          method: "POST",
+          headers: commonHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify(payload)
+        });
+        const text = await res.text();
+        if (!res.ok) {
+          setStatus(statusId, `فشل (${res.status}): ${text}`, false);
+          return false;
+        }
+        setStatus(statusId, `تم الإرسال بنجاح (${res.status}): ${text}`, true);
+        return true;
+      } catch (err) {
+        setStatus(statusId, `خطأ في الاتصال: ${err.message}`, false);
+        return false;
+      }
+    }
+
+    function sendHeart() {
+      const payload = {
+        device_id: document.getElementById("deviceId").value.trim(),
+        timestamp: new Date().toISOString(),
+        uptime_ms: Math.round(performance.now()),
+        bpm: parseFloat(document.getElementById("bpm").value),
+        quality: parseFloat(document.getElementById("quality").value),
+        measured_seconds: parseInt(document.getElementById("measuredSeconds").value, 10)
+      };
+      return postJson("/api/v1/heartreat", payload, "stHeart");
+    }
+
+    function sendHeat() {
+      const payload = {
+        device_id: document.getElementById("deviceId").value.trim(),
+        timestamp: new Date().toISOString(),
+        uptime_ms: Math.round(performance.now()),
+        temperature_c: parseFloat(document.getElementById("tempC").value),
+        sensor: document.getElementById("sensorName").value.trim()
+      };
+      return postJson("/api/v1/heat", payload, "stHeat");
+    }
+
+    function sendAccel() {
+      const payload = {
+        device_id: document.getElementById("deviceId").value.trim(),
+        timestamp: new Date().toISOString(),
+        uptime_ms: Math.round(performance.now()),
+        activity: document.getElementById("activity").value,
+        motion_g: parseFloat(document.getElementById("motionG").value),
+        motion_max_g: parseFloat(document.getElementById("motionMaxG").value),
+        steps: parseInt(document.getElementById("steps").value, 10),
+        steps_total: parseInt(document.getElementById("stepsTotal").value, 10)
+      };
+      return postJson("/api/v1/accelerator", payload, "stAccel");
+    }
+
+    async function sendSound() {
+      const fileInput = document.getElementById("audioFile");
+      if (!fileInput.files || !fileInput.files[0]) {
+        setStatus("stSound", "اختر ملف صوتي أولاً.", false);
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append("file", fileInput.files[0]);
+      fd.append("device_id", document.getElementById("deviceId").value.trim());
+      fd.append("timestamp", new Date().toISOString());
+      fd.append("uptime_ms", String(Math.round(performance.now())));
+      fd.append("species", document.getElementById("species").value);
+      fd.append("peak_db", document.getElementById("peakDb").value);
+      fd.append("background_db", document.getElementById("bgDb").value);
+      fd.append("temperature_c", document.getElementById("tempC").value);
+      fd.append("bpm", document.getElementById("bpm").value);
+      fd.append("activity_before", document.getElementById("activity").value);
+
+      setStatus("stSound", "جاري الرفع والتحليل...", true);
+      try {
+        const res = await fetch(getBase() + "/api/v1/sound", {
+          method: "POST",
+          headers: commonHeaders(),
+          body: fd
+        });
+        const text = await res.text();
+        if (!res.ok) {
+          setStatus("stSound", `فشل رفع الصوت (${res.status}): ${text}`, false);
+          return;
+        }
+        setStatus("stSound", `تم التحليل بنجاح (${res.status}).`, true);
+        try {
+          document.getElementById("latestOutput").textContent = JSON.stringify(JSON.parse(text), null, 2);
+        } catch {
+          document.getElementById("latestOutput").textContent = text;
+        }
+      } catch (err) {
+        setStatus("stSound", `خطأ أثناء رفع الصوت: ${err.message}`, false);
+      }
+    }
+
+    async function fetchLatest() {
+      try {
+        const res = await fetch(getBase() + "/api/v1/latest-result", {
+          method: "GET",
+          headers: commonHeaders()
+        });
+        const text = await res.text();
+        if (!res.ok) {
+          setStatus("stLatest", `فشل الجلب (${res.status})`, false);
+          return;
+        }
+        setStatus("stLatest", `تم التحديث (${res.status})`, true);
+        try {
+          document.getElementById("latestOutput").textContent = JSON.stringify(JSON.parse(text), null, 2);
+        } catch {
+          document.getElementById("latestOutput").textContent = text;
+        }
+      } catch (err) {
+        setStatus("stLatest", `خطأ في الاتصال: ${err.message}`, false);
+      }
+    }
+
+    async function sendAllSensors() {
+      await sendHeart();
+      await sendHeat();
+      await sendAccel();
+      await fetchLatest();
+    }
+  </script>
+</body>
+</html>
